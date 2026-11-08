@@ -43,7 +43,7 @@ const WED = {
   rooms: ['garage', 'kitchen', 'hallway'],
   own: { m: 'kitchen', d: 'garage' },
   jobs: {
-    kitchen: [{ at: 'the sink' }, { at: 'the stove' }, { at: 'the kettle', pack: true }, { at: 'the telephone', pack: true }, { at: 'the lamp', pack: true }],
+    kitchen: [{ at: 'the sink' }, { at: 'the stove' }, { at: 'the kettle', pack: true }, { at: 'the telephone' }, { at: 'the lamp', pack: true }], // the telephone never gets boxed: Marion talks through it later
     garage: [{ at: 'the workbench', pack: true }, { spot: [-1.0, -2.5], yaw: Math.PI }, { at: 'the car radio', pack: true }],
   },
   openerRoom: 'kitchen',
@@ -66,7 +66,7 @@ const WED = {
   },
   hints: [
     { when: () => !PS.lured, text: 'When you say a thing, Dad goes and looks for it. He cannot help it.' },
-    { when: () => !packed('kitchen', 'the telephone'), text: 'Mom answers the telephone if it says Annie. Before it goes in a box.' },
+    { text: 'Mom answers the telephone if it says Annie.' },
     { text: 'I want to stay.' },
     { when: () => !PS.secret, text: 'Mom and Dad only fight when they are in the same room.' },
     { text: 'If you say stay, they come over. Then you can hold on.' },
@@ -248,8 +248,8 @@ function packReact() {
   if (c.onSay && c.onSay(text, o)) return;
   const people = here();
   const known = heardWords(text).filter(t => S.known[t]);
-  // Nothing it has heard: a noise. Somebody glances over, and that's all.
-  if (!known.length) { if (people.length) people[S.spoke % people.length].attn = 1.4; return; }
+  // Nothing it has heard: the grown-ups only glance over. Wren answers anyway (chat.js).
+  if (!known.length) { if (!chat(text, o, false) && people.length) people[S.spoke % people.length].attn = 1.4; suspicious(); return; }
   const fightBy = {};
   for (const k in c.fights) fightBy[squeeze(k)] = k;
   const secret = known.map(t => fightBy[t]).find(Boolean);
@@ -261,7 +261,9 @@ function packReact() {
     }
   }
   for (const t of known) if (LURE_BY[t] && lure(LURE_BY[t], o)) { suspicious(); return; }
-  people.forEach(p => { p.attn = Math.max(p.attn, 1.8); });
+  // Not a lure or a fight: they just answer, and get on with it.
+  if (!chat(text, o, true)) people.forEach(p => { p.attn = Math.max(p.attn, 1.8); });
+  suspicious();
 }
 
 // ---- The day ----

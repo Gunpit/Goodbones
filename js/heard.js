@@ -150,6 +150,8 @@ function heardReact(text, u, tokens, people, o) {
   const asking = S.tracks.find(t => t.room === S.room && t.waiting > 0);
   const land = () => { S.tracks.forEach(t => { if (t.room === S.room && !t.done && t.i > 0) t.interrupted = true; }); people.forEach(p => { p.attn = Math.max(p.attn, 2.6); }); };
   if (!heard.length) {
+    // Wren gets it anyway. She always has (chat.js).
+    if (typeof chat === 'function' && wrenFree()) { if (asking) { asking.waiting = 0; asking.silent = false; } S.heat = Math.max(0, S.heat - 1); chat(text, o, false); return; }
     // Just noise. Nobody stops. Somebody might look up.
     S.heat = Math.max(0, S.heat - 1);
     if (people.length) people[S.spoke % people.length].attn = 1.4;
@@ -190,8 +192,9 @@ function heardReact(text, u, tokens, people, o) {
     checkHeat();
     return;
   }
-  // A word they know, but nothing to do with anything. A glance, and they carry on.
+  // A word they know, but nothing to do with anything. They answer it, and carry on.
   S.heat = Math.max(0, S.heat - .6);
+  if (typeof chat === 'function' && chat(text, o, true)) { checkHeat(); return; }
   if (asking && isHere(W)) { say('w', wrenReply()); return; }
   if (people.length) {
     const p = people[S.spoke % people.length];
