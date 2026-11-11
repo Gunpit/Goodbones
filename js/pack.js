@@ -68,6 +68,7 @@ const WED = {
     { when: () => !PS.lured, text: 'When you say a thing, Dad goes and looks for it. He cannot help it.' },
     { text: 'Mom answers the telephone if it says Annie.' },
     { text: 'I want to stay.' },
+    { when: () => !PS.uses.voice_d, text: 'Do Dad\'s voice when he is in the garage. Mom will go and find him.' },
     { when: () => !PS.secret, text: 'Mom and Dad only fight when they are in the same room.' },
     { text: 'If you say stay, they come over. Then you can hold on.' },
   ],
@@ -77,7 +78,7 @@ const WED = {
   },
   alone: { m: { mortgage: "That is Dell's word." }, d: { school: 'School?' } },
   warn: { m: 'It is nearly lunch.', d: 'Lunch soon, hon?' },
-  tips: [[1500, 'They are packing the house. Keep them busy until lunch.'], [9000, 'Say words you have heard. Whoever cares about a word goes to look where you said it.'], [17000, 'Click a thing to talk through it. Tab changes room.'], [26000, '']],
+  tips: [[1500, 'They are packing the house. Keep them busy until lunch.'], [9000, 'Say words you have heard. Whoever cares about a word goes to look where you said it.'], [17000, 'Click a thing, or press ← →, to talk through it. Tab changes room.'], [26000, '']],
   endLabel: 'LUNCH',
 };
 
@@ -364,7 +365,7 @@ const PACK_SCENE = {
   place: {
     m: { room: 'kitchen', x: -.5, z: -1.35, yaw: Math.PI },
     d: { room: 'kitchen', x: 1.14, z: .3, yaw: -Math.PI / 2, seat: 1, stand: [2.15, .3] },
-    w: { room: 'kitchen', x: -1.14, z: .3, yaw: Math.PI / 2, seat: 1, stand: [-2.4, .8] },
+    w: { room: 'kitchen', x: -1.27, z: .3, yaw: Math.PI / 2, seat: 1, stand: [-2.4, .8] },
   },
   onStart: startPack,
 };

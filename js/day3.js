@@ -12,7 +12,7 @@ const HALL_FINAL = {
 const SAT_PLACE = {
   m: { room: 'kitchen', x: 0, z: -.46, yaw: 0, seat: 1, stand: [0, -1.3] },
   d: { room: 'kitchen', x: 1.14, z: .3, yaw: -Math.PI / 2, seat: 1, stand: [2.15, .3] },
-  w: { room: 'kitchen', x: -1.14, z: .3, yaw: Math.PI / 2, seat: 1, stand: [-2.4, .8] },
+  w: { room: 'kitchen', x: -1.27, z: .3, yaw: Math.PI / 2, seat: 1, stand: [-2.4, .8] },
   g: { room: 'kitchen', x: 0, z: 1.06, yaw: Math.PI, seat: 1, stand: [0, 1.9] },
 };
 // On Saturday nobody minds anything you say. That is what is wrong with it.
@@ -144,7 +144,7 @@ const DAY3_SCENES = [
   {
     id: 'fri_dead', day: 'FRIDAY', part: 'Morning', state: 'day', room: 'kitchen', acts: false, boxes: 8, gShut: true, only: () => !alive(),
     place: {
-      w: { room: 'kitchen', x: -1.14, z: .3, yaw: Math.PI / 2, seat: 1, stand: [-2.4, .8] },
+      w: { room: 'kitchen', x: -1.27, z: .3, yaw: Math.PI / 2, seat: 1, stand: [-2.4, .8] },
       m: { room: 'garage', x: -.42, z: .25, yaw: Math.PI, car: true, dead: true },
       d: { room: 'garage', x: .42, z: .25, yaw: Math.PI, car: true, dead: true },
       g: { room: 'kitchen', x: 2.3, z: -.95, yaw: -Math.PI / 2 },
@@ -263,6 +263,6 @@ const ENDINGS = {
   go_dead: ['YOU CAN GO', 'The kitchen is sixty-eight degrees. Two of them never left.', ''],
   forward: ['FORWARDING ADDRESS', 'Marion locks up, and does not look back.', 'Their mail still comes, for a while. You keep it very tidy.'],
   forward_dead: ['FORWARDING ADDRESS', 'Annie locks up.', 'Her mail still comes, for a while. You keep it very tidy.'],
-  saturday: ['SATURDAY', '', ''],
-  all_home: ['EVERYONE IS HOME', '', ''],
+  saturday: ['SATURDAY', 'Every day is Saturday now.', 'Nobody can think who to call.'],
+  all_home: ['EVERYONE IS HOME', 'Annie stays on. Wren never leaves.', 'The garage door stays shut.'],
 };

@@ -178,11 +178,12 @@ SCENES.push(
 );
 // ?scene=epilogue plays just the yard. &ending=forward, go_dead or forward_dead picks which one (go is the default).
 SCENES.push({
-  id: 'epilogue', day: '', part: '', state: 'eve', room: 'hallway', acts: false, tracks: [], hot: {}, place: {},
+  // Only when asked for by the link. Otherwise the end of Friday would walk straight into it.
+  id: 'epilogue', day: '', part: '', state: 'eve', room: 'hallway', acts: false, tracks: [], hot: {}, place: {}, only: () => params.get('scene') === 'epilogue',
   onStart: () => {
     const e = params.get('ending') || 'go';
     S.f.ending = e;
-    if (e.endsWith('_dead')) S.g.outcome = 'dead';
+    if (e.endsWith('_dead') || e === 'all_home') S.g.outcome = 'dead';
     $('gl').style.opacity = '0';
     setTimeout(finishDay, 0);
   },

@@ -156,7 +156,7 @@ const SAID_MOST = () => { let b = null, n = 0; for (const k in S.saidCount) if (
 const SCENES = [
   {
     id: 'morning', day: 'WEDNESDAY', part: 'Morning', state: 'day', room: 'kitchen', acts: true, heard: true,
-    place: { m: { room: 'kitchen', x: -.5, z: -1.35, yaw: Math.PI, wander: true }, d: { room: 'kitchen', x: 1.14, z: .3, yaw: -Math.PI / 2, seat: 1, stand: [2.15, .3] }, w: { room: 'kitchen', x: -1.14, z: .3, yaw: Math.PI / 2, seat: 1, stand: [-2.4, .8] } },
+    place: { m: { room: 'kitchen', x: -.5, z: -1.35, yaw: Math.PI, wander: true }, d: { room: 'kitchen', x: 1.14, z: .3, yaw: -Math.PI / 2, seat: 1, stand: [2.15, .3] }, w: { room: 'kitchen', x: -1.27, z: .3, yaw: Math.PI / 2, seat: 1, stand: [-2.4, .8] } },
     tracks: [{ room: 'kitchen', start: 2.5, lines: [
       ['w', 'Why is Friday circled?'],
       ['m', "That's the truck, honey."],
@@ -226,7 +226,7 @@ const SCENES = [
         ['w', 'Hi. Did you hear? They said Friday again.'],
         ['w', "You don't have to be sad. I can visit."],
         ['w', 'You talk now, right? I heard you. Say something.', { ask: 7 }],
-        ['w', 'Wow!'],
+        ['w', 'Wow!', { if: () => S.spoke > (S.spokeAt || 0) }], // only if you did say something
         ['w', 'When I fall asleep in the car, I wake up in my bed. Dad carries me in. You do not even have to do anything.'],
         ['w', 'That is a good one, right?', { ask: 4 }],
         ['w', 'Grandma went to sleep in the big bed. She got really still and really calm.'],
@@ -249,7 +249,7 @@ const SCENES = [
   },
   {
     id: 'dinner', day: 'WEDNESDAY', part: 'Evening', state: 'eve', room: 'kitchen', acts: true,
-    place: { m: { room: 'kitchen', x: 0, z: -.46, yaw: 0, seat: 1, stand: [0, -1.3] }, d: { room: 'kitchen', x: 1.14, z: .3, yaw: -Math.PI / 2, seat: 1, stand: [2.15, .3] }, w: { room: 'kitchen', x: -1.14, z: .3, yaw: Math.PI / 2, seat: 1, stand: [-2.4, .8] } },
+    place: { m: { room: 'kitchen', x: 0, z: -.46, yaw: 0, seat: 1, stand: [0, -1.3] }, d: { room: 'kitchen', x: 1.14, z: .3, yaw: -Math.PI / 2, seat: 1, stand: [2.15, .3] }, w: { room: 'kitchen', x: -1.27, z: .3, yaw: Math.PI / 2, seat: 1, stand: [-2.4, .8] } },
     tracks: [{ room: 'kitchen', start: 2, lines: [
       ['d', 'Pass the salt.'],
       ['cap', 'Marion passes the salt.'],
@@ -540,7 +540,8 @@ function updateHeads(dt) {
     p.headYaw += (want - p.headYaw) * Math.min(1, dt * 6);
     p.sleepy = Math.max(0, p.sleepy - dt);
     p.headPitch += ((p.sleepy > 0 ? .75 : p.held ? .28 : .03) - p.headPitch) * Math.min(1, dt * 3);
-    if (p.hop > 0) { p.hop -= dt; p.y = Math.max(0, Math.sin(p.hop * 9)) * .24; } else p.y = 0;
+    // Sitting (on a chair or the floor), a hop is just a little bounce in place. Standing, it's a real jump.
+    if (p.hop > 0) { p.hop -= dt; p.y = Math.max(0, Math.sin(p.hop * 9)) * (p.seated > .3 || p.floorSit || p.lie ? .025 : .24); } else p.y = 0;
   });
 }
 const here = () => all.filter(p => p.room === S.room && !p.gone && !p.dead && p.root.visible);
@@ -554,7 +555,7 @@ function startScene(i) {
   // The end of a day gets its own card.
   const prev = S.scene;
   if (!sc) return finishDay();
-  if (prev && prev.day !== sc.day && !sc.saturday && !prev.prologue && !S.dayEnded) {
+  if (prev && prev.day !== sc.day && (prev.day === 'WEDNESDAY' || prev.day === 'THURSDAY') && !sc.saturday && !prev.prologue && !S.dayEnded) {
     S.dayEnded = true;
     S.tracks = []; S.subs = []; S.sub = null;
     if (prev.day === 'WEDNESDAY') showCard('END OF WEDNESDAY', 'One day down.');
@@ -639,7 +640,7 @@ function runTracks(dt) {
     if (present) { S.subs.push({ who: l[0], text, dur: d }); const sp = l[0] !== 'cap' && personById(l[0]); if (sp) sp.talk = d; }
     t.t = d + (present ? .42 : .25) + (opts.pause || 0);
     if (opts.after) opts.after();
-    if (opts.ask) { t.waiting = opts.ask; t.silent = present && !S.wrenNudged; if (t.silent) S.wrenNudged = true; }
+    if (opts.ask) { S.spokeAt = S.spoke; t.waiting = opts.ask; t.silent = present && !S.wrenNudged; if (t.silent) S.wrenNudged = true; }
   });
   if (S.scene.garage) return tickGarage(dt);
   if (S.scene.final) return tickFinal(dt);

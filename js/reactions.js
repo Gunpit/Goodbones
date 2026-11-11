@@ -11,8 +11,8 @@ const STANCE = {
     id: 'WEDNESDAY',
     pool: {
       m: ['It is stuck, Dell.', 'It is a noise.', 'Ignore it.', 'The guy is coming tomorrow, Dell.'],
-      d: ['Yeah, I heard you, buddy.', 'Okay, buddy.', 'You said, buddy.'],
-      w: ['You said that already.', 'Try a new one.', 'You know more than that.'],
+      d: ['Okay, buddy.', 'Sure thing, buddy.', 'Yeah? Good for you, buddy.', 'Hang on, buddy. Boxes.'],
+      w: ['Ha.', 'You are getting better.', 'Keep going.', 'I like that one.'],
     },
     // It can barely get a word out. Mostly they talk over it.
     mush: [null, ['m', 'Dell, it is doing the thing.'], null, ['w', 'Say it again. Slower.'], ['d', 'It sounds like it is gargling.'], null, ['cap', 'Marion looks at {obj}, and goes back to what she was doing.'], null, ['w', 'You need real letters.'], ['m', 'It wants descaling, or something.']],
@@ -297,7 +297,7 @@ function poolLine(st, who) {
   if (!pool) return null;
   S.stanceI = S.stanceI || {};
   const at = S.stanceI[st.id + who] = (S.stanceI[st.id + who] || 0) + 1;
-  for (let i = 0; i < pool.length; i++) { const l = pool[(at + i) % pool.length]; if (fits(l)) return l; }
+  for (let i = 0; i < pool.length; i++) { const l = pool[(at + i) % pool.length]; if (fits(l) && !(typeof recentLine === 'function' && recentLine(l))) return l; }
   return null;
 }
 // A pool line can also be a caption: ['cap', '...'].

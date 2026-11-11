@@ -9,6 +9,14 @@ const EPI_SOUNDS = [['g', 'uh', 1.1], ['uh', null, 1.04], ['uh', null, .98], ['d
 const EPI_CAM = { a: { p: [0, 1.2, 6.5], t: [0, 2.15, -2], fov: 52 }, b: { p: [0, 1.55, 3.9], t: [0, 1.85, -3], fov: 44 } };
 const EPI_DOOR = [0, 1.55, -2.95];
 const EPI = { on: false, done: false };
+// The endings where they stay get the same yard, at night, with nobody on the path. Someone inside says goodnight,
+// and the house says it back: GOOD NIGHT instead of GOOD BYE.
+const EPI_NIGHT_SOUNDS = [['g', 'uh', 1.1], ['uh', null, 1.04], ['uh', null, .98], ['d', null, .92], null, ['n', 'ay', 1.0], ['ay', null, .95], ['ay', null, .9], ['ay', null, .86], ['t', null, .8]];
+const EPI_STAY = {
+  saturday: { word: 'GOOD NIGHT', lines: [['w', 'Goodnight, house.'], ['d', 'Night, buddy.'], ['g', 'Night, pal.']] },
+  all_home: { word: 'GOOD NIGHT', lines: [['w', 'Goodnight, house.'], ['w', 'Goodnight, Mom. Goodnight, Dad.']] },
+};
+EPI_ENDINGS.push(...Object.keys(EPI_STAY));
 const _epA = new THREE.Vector3(), _epB = new THREE.Vector3(), _epC = new THREE.Vector3(), _epD = new THREE.Vector3();
 
 function epiCam(from, to, k) {
@@ -30,6 +38,9 @@ const epiWalk = (...pts) => pts.map(([x, z]) => ({ t: 'walk', x, z }));
 
 function playEpilogue(done) {
   EPI.on = true; EPI.done = true; EPI.then = done; EPI.t = 0; EPI.phase = 'black'; EPI.shake = 0;
+  const stay = EPI.stay = EPI_STAY[S.f.ending] || null;
+  EPI.wordText = stay ? stay.word : EPI_WORD; EPI.sounds = stay ? EPI_NIGHT_SOUNDS : EPI_SOUNDS; EPI.linesOut = false;
+  const lit = stay ? 'night' : 'eve';
   releaseArms();
   tip(''); $('hover').textContent = ''; $('said').textContent = '';
   // Nothing of the game's own on screen out here: no map, no names.
@@ -44,10 +55,13 @@ function playEpilogue(done) {
     // The inside doors are real objects, not part of the picture: tell the house nobody is in any of its rooms.
     HOUSE.update(0, 'photo', {});
     Render.stopLive();
-    Render.showRoom('photo', undefined, 'eve', { dim: 1, tint: [1, 1, 1], flick: 1 });
-    Render.goLive('photo', 'eve');
+    Render.showRoom('photo', undefined, lit, { dim: 1, tint: [1, 1, 1], flick: 1 });
+    Render.goLive('photo', lit);
     epiCam(EPI_CAM.a, EPI_CAM.a, 0);
     $('gl').style.transition = ''; $('gl').style.opacity = '1';
+    // Nobody leaves. They're all inside.
+    // The yard has its own fixed light, so night is a filter over the picture. The words sit above it and stay bright.
+    if (stay) { $('gl').style.filter = 'brightness(.5) saturate(.6) sepia(.4) hue-rotate(180deg) contrast(1.08)'; EPI.phase = 'walk'; EPI.t = 0; hideCard(); return; }
     const cast = epiCast(), grown = cast.filter(p => p !== W);
     // The grown-ups go first, side by side, down the path and off to the right where the truck is.
     grown.forEach((p, i) => {
@@ -73,7 +87,7 @@ function tickEpilogue(dt) {
   if (S.sub) { S.sub.dur -= dt; if (S.sub.dur <= 0) S.sub = null; }
   if (!S.sub && S.subs.length) S.sub = S.subs.shift();
   if (EPI.phase === 'black') return;
-  epiCast().forEach(p => {
+  if (!EPI.stay) epiCast().forEach(p => {
     if (p.room !== 'photo') return;
     runPerson(p, dt);
     People.pose(p, dt, S.time);
@@ -82,12 +96,17 @@ function tickEpilogue(dt) {
     p.boxM.visible = false; p.can.visible = false; p.quilt.visible = false; p.blob.visible = true;
   });
   S.time += dt;
-  if (EPI.phase === 'walk') {
+  if (EPI.phase === 'walk' && EPI.stay) {
+    // Voices from inside, through the walls. Then the same slow push in, with no truck.
+    epiCam(EPI_CAM.a, EPI_CAM.a, 0);
+    if (EPI.t > 2.2 && !EPI.linesOut) { EPI.linesOut = true; EPI.stay.lines.forEach(([who, text]) => S.subs.push({ who, text, dur: dur(text) + .4 })); }
+    if ((EPI.linesOut && EPI.t > 4 && !S.sub && !S.subs.length) || EPI.t > 30) { EPI.phase = 'push'; EPI.t = 0; }
+  } else if (EPI.phase === 'walk') {
     epiCam(EPI_CAM.a, EPI_CAM.a, 0);
     if ((W.gone && !S.sub && !S.subs.length) || EPI.t > 30) { EPI.phase = 'push'; EPI.t = 0; Audio2.fx.engine && Audio2.fx.engine(); }
   } else if (EPI.phase === 'push') {
     // Somewhere off to the right, the truck. The camera doesn't follow it.
-    if (EPI.t > 1.5 && !EPI.engine2) { EPI.engine2 = true; Audio2.fx.engine && Audio2.fx.engine(); }
+    if (!EPI.stay && EPI.t > 1.5 && !EPI.engine2) { EPI.engine2 = true; Audio2.fx.engine && Audio2.fx.engine(); }
     epiCam(EPI_CAM.a, EPI_CAM.b, Math.min(1, EPI.t / 9));
     if (EPI.t >= 9.4) {
       EPI.phase = 'word'; EPI.t = 0;
@@ -124,7 +143,7 @@ function epiBuildWord() {
   const el = $('strain');
   el.innerHTML = '';
   EPI.word = { i: -1, spans: [], idle: 0, held: null, heldT: 0, relT: 0, done: false, finale: 1.1 };
-  [...EPI_WORD].forEach((c, i) => {
+  [...EPI.wordText].forEach((c, i) => {
     const sp = document.createElement('span');
     sp.textContent = c;
     sp.className = c === ' ' ? 'gap' : 'l';
@@ -140,8 +159,8 @@ function epiNextLetter() {
   const st = EPI.word;
   if (st.i >= 0 && st.spans[st.i]) st.spans[st.i].classList.remove('now');
   st.i++;
-  while (st.i < EPI_WORD.length && EPI_WORD[st.i] === ' ') { st.spans[st.i].classList.add('seen'); st.i++; }
-  if (st.i >= EPI_WORD.length) { st.done = true; return; }
+  while (st.i < EPI.wordText.length && EPI.wordText[st.i] === ' ') { st.spans[st.i].classList.add('seen'); st.i++; }
+  if (st.i >= EPI.wordText.length) { st.done = true; return; }
   st.spans[st.i].classList.add('seen', 'now');
   st.idle = 0;
 }
@@ -150,12 +169,12 @@ function epiKey(e) {
   if (!EPI.on || EPI.phase !== 'word' || !st || st.done || e.repeat || e.key.length !== 1) return;
   const c = e.key.toLowerCase(), sp = st.spans[st.i];
   tip('');
-  if (c !== EPI_WORD[st.i].toLowerCase()) {
+  if (c !== EPI.wordText[st.i].toLowerCase()) {
     Audio2.fx.flop && Audio2.fx.flop();
     sp.classList.remove('nope'); void sp.offsetWidth; sp.classList.add('nope');
     return;
   }
-  const snd = EPI_SOUNDS[st.i];
+  const snd = EPI.sounds[st.i];
   st.held = c; st.heldT = 0; st.bend = snd[2]; st.relT = 0;
   sp.classList.add('said');
   EPI.shake = 1;

@@ -95,7 +95,7 @@ const DAY2_SCENES = [
     place: {
       m: { room: 'kitchen', x: -.5, z: -1.35, yaw: Math.PI },
       d: { room: 'kitchen', x: 1.5, z: -1.3, yaw: Math.PI },
-      w: { room: 'kitchen', x: -1.14, z: .3, yaw: Math.PI / 2, seat: 1, stand: [-2.4, .8] },
+      w: { room: 'kitchen', x: -1.27, z: .3, yaw: Math.PI / 2, seat: 1, stand: [-2.4, .8] },
     },
     tracks: [
       { room: 'kitchen', id: 'leaving', start: 2, lines: [
@@ -165,7 +165,7 @@ const DAY2_SCENES = [
   {
     id: 'thu_dead', day: 'THURSDAY', part: 'Night', state: 'night', room: 'kitchen', acts: false, boxes: 9, gShut: true, only: () => S.g.outcome === 'dead',
     place: {
-      w: { room: 'kitchen', x: -1.14, z: .3, yaw: Math.PI / 2, seat: 1, stand: [-2.4, .8] },
+      w: { room: 'kitchen', x: -1.27, z: .3, yaw: Math.PI / 2, seat: 1, stand: [-2.4, .8] },
       // They're still out there. Nobody has been told yet.
       m: { room: 'garage', x: -.42, z: .25, yaw: Math.PI, car: true, dead: true },
       d: { room: 'garage', x: .42, z: .25, yaw: Math.PI, car: true, dead: true },

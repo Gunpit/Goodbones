@@ -61,10 +61,56 @@ const WREN_SAYS = {
 const WREN_NEAR = ['Did you say "{w}"?', 'Almost. "{w}."', '"{w}"? I think you mean "{w}."'];
 // And when it's just noise, she plays along anyway.
 const WREN_NOISE = ['What?', 'Say it slower.', 'That is not a word. I like it, though.', 'Bless you.', 'You need real letters.', 'Try again. Hello. Say hello.'];
-const WREN_AGAIN = ['You said that already.', 'Try a new one.', 'You know more than that.'];
+// When she's used up everything she has for a word, she changes the subject instead of complaining. Days she can chat freely only.
+const WREN_RIFFS = [
+  'Do you want to know a secret? I hid a crayon behind you.',
+  'I am going to miss the stairs most. And you.',
+  'Mom says houses do not have feelings. I think she is wrong.',
+  'My new room has a window that does not open.',
+  'Can you hear me from upstairs too?',
+  'I drew you. You are the one with the face.',
+  'Dad hums when he is sad. Did you know that?',
+  'The condo does not even have stairs.',
+  'If you had a name, what would it be? Not fridge.',
+  'I am teaching you so you can tell them yourself.',
+  'When I was little I thought you were breathing. You were, right?',
+  'Do you get cold at night? I do.',
+];
+const RIFF_DAYS = new Set(['WEDNESDAY', 'THURSDAY', 'NIGHT_WED', 'NIGHT_THU']);
+
+// ---- Nobody says the same thing twice in a row ----
+// Every line said is remembered for a while. While the house is being answered, a line that was said recently is just dropped:
+// better a look than the same sentence again. Pickers below try fresh lines first, so this rarely has to drop anything.
+const FRESH_FOR = 90;
+const lineText = l => Array.isArray(l) ? l[1] : l;
+function recentLine(l) { const t = lineText(l); return !!t && S.lineT && S.time - (S.lineT[fill(t)] ?? -999) < FRESH_FOR; }
+function freshOf(list) { return (list || []).find(l => l && typeof l !== 'function' && !recentLine(l)) || null; }
+addEventListener('load', () => {
+  const _say = say;
+  say = (who, text) => {
+    S.lineT = S.lineT || {};
+    const t = fill(text);
+    if (S.replying && who !== 'cap' && S.time - (S.lineT[t] ?? -999) < FRESH_FOR) return;
+    S.lineT[t] = S.time;
+    _say(who, text);
+  };
+  const _react = react;
+  react = () => {
+    const before = S.subs.length + (S.sub ? 1 : 0), typed = S.typed;
+    S.replying = true;
+    try { _react(); } finally { S.replying = false; }
+    // Nobody had anything new to say. Wren still lets you know she heard.
+    if (typed.trim() && S.subs.length + (S.sub ? 1 : 0) <= before && typeof wrenFree === 'function' && wrenFree()) {
+      W.attn = Math.max(W.attn, 3);
+      if (S.spoke % 3 === 0) W.hop = .5; else if (S.spoke % 3 === 1) { W.waveWant = 1; setTimeout(() => { W.waveWant = 0; }, 1200); }
+    }
+  };
+});
 // Only things that can't pull a grown-up off a job.
 const CHAT_SAFE = new Set(['look', 'wave', 'cold', 'hot', 'dark', 'light', 'sleep', 'jump', 'rude']);
 let chatI = { noise: 0, near: 0 };
+// The list starting from position i, wrapping round: the next line in turn comes first, but any of them can come up.
+const rotate = (list, i) => list.slice(i % list.length).concat(list.slice(0, i % list.length));
 
 function wrenFree() { return isHere(W) && !W.held && !W.lie && !wrenAsleep(); }
 function fillObj(l, o) { return typeof l === 'string' ? l.replace(/\{obj\}/g, o ? o.name : 'the house').replace(/\{Obj\}/g, o ? o.name[0].toUpperCase() + o.name.slice(1) : 'The house') : l; }
@@ -77,26 +123,28 @@ function chat(text, o, knownAny) {
   S.chatN = S.chatN || {};
   if (wrenFree()) {
     W.attn = Math.max(W.attn, 3);
-    if (!u) say('w', WREN_NOISE[chatI.noise++ % WREN_NOISE.length]);
-    else if (!u.clear) say('w', WREN_NEAR[chatI.near++ % WREN_NEAR.length].replace(/\{w\}/g, u.as));
+    let l = null;
+    if (!u) l = freshOf(rotate(WREN_NOISE, chatI.noise++));
+    else if (!u.clear) l = freshOf(rotate(WREN_NEAR, chatI.near++).map(x => x.replace(/\{w\}/g, u.as)));
     else {
-      const n = S.chatN['w' + st.id + u.key] = (S.chatN['w' + st.id + u.key] || 0) + 1;
-      const day = wordLine(st, u.key, 'w', n);
-      const own = WREN_SAYS[u.key] || WORDS[u.key].w || [];
-      const l = day || (n <= own.length ? own[n - 1] : n === own.length + 1 ? WREN_AGAIN[n % WREN_AGAIN.length] : own[(n - 1) % (own.length || 1)]);
-      if (l) say('w', fillObj(l, o));
+      // The day's lines for this word first, then hers, then anything she hasn't said yet.
+      const e = st.words[u.key] || {};
+      const dayLines = (e.w || []).map(x => typeof x === 'function' ? x() : x).filter(fits);
+      l = freshOf(dayLines.map(x => fillObj(x, o))) || freshOf((WREN_SAYS[u.key] || WORDS[u.key].w || []).map(x => fillObj(x, o)));
     }
-    spoke = true;
+    if (!l && RIFF_DAYS.has(st.id)) l = freshOf(rotate(WREN_RIFFS, chatI.riff = (chatI.riff || 0) + 1));
+    if (l) { say('w', l); spoke = true; }
     // A long chat with the fridge doesn't go unnoticed.
     if (isHere(M)) S.heat += .3;
   }
   // The grown-ups chime in only on words they've heard. Every other time at most, so it stays a chat, not a crowd.
   if (u && u.clear && knownAny && adults.length && (!spoke || S.spoke % 2)) {
-    const n = S.chatN[st.id + u.key] = (S.chatN[st.id + u.key] || 0) + 1;
-    const k = STANCE_NAMED[u.key] && adults.includes(STANCE_NAMED[u.key]) ? STANCE_NAMED[u.key] : adults.find(k => wordLine(st, u.key, k, n)) || null;
-    const l = k && wordLine(st, u.key, k, n);
-    if (l) { sayLine(k, fillObj(l, o)); personById(k).attn = 2.6; S.heat += 1; spoke = true; }
-    else if (!spoke) { const p = personById(adults[S.spoke % adults.length]); const pl = poolLine(st, p.id); if (pl) { sayLine(p.id, fillObj(pl, o)); S.heat += .6; spoke = true; } }
+    // Whoever was named, else whoever has something fresh to say about it.
+    const linesFor = k => { const e = st.words[u.key] || {}; const list = (k === 'd' && !isHere(M) && e.d_alone) || e[k] || []; return list.map(x => typeof x === 'function' ? x() : x).filter(x => x && fits(x)).map(x => fillObj(x, o)); };
+    const turn = STANCE_NAMED[u.key] && adults.includes(STANCE_NAMED[u.key]) ? [STANCE_NAMED[u.key]].concat(adults) : adults;
+    const k = turn.find(k => freshOf(linesFor(k)));
+    if (k) { sayLine(k, freshOf(linesFor(k))); personById(k).attn = 2.6; S.heat += 1; spoke = true; }
+    else if (!spoke) { const p = personById(adults[S.spoke % adults.length]); const pl = poolLine(st, p.id); if (pl && !recentLine(pl)) { sayLine(p.id, fillObj(pl, o)); S.heat += .6; spoke = true; } else p.attn = 2; }
   }
   if (u && u.clear) { const act = WORDS[u.key].do; if (act && CHAT_SAFE.has(act) && ACTS[act]) ACTS[act](o, u.key); }
   return spoke;
